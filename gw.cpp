@@ -70,10 +70,11 @@ using namespace std;
 
 // Radio pipe addresses for the 2 nodes to communicate.
 // First pipe is for writing, 2nd, 3rd, 4th, 5th & 6th is for reading...
-const uint64_t pipes[2] = { 0xDEADBEEF00LL, 0xDEADBEEFF4LL };
+const uint64_t pipes[2] = { 0xCAADBEEF00LL, 0xCAADBEEFF4LL };
+
 
 // Setup for GPIO 22 CE and CE1 CSN with SPI Speed @ 8Mhz
-RF24 radio(RPI_V2_GPIO_P1_15, BCM2835_SPI_CS0, BCM2835_SPI_SPEED_8MHZ);
+RF24 radio(RPI_V2_GPIO_P1_22, BCM2835_SPI_CS0, BCM2835_SPI_SPEED_8MHZ);
 
 void openSyslog() {
 	setlogmask (LOG_UPTO(LOG_INFO));openlog(NULL, 0, LOG_USER);
@@ -162,23 +163,12 @@ void send(itank_t package) {
 	package.fragment=0;
 	package.repited=0;
 	package.node_req=0;
-	log(LOG_INFO,
-			"1 Подготовлен пакет для ноды %d с номером %d  pin=%i '%s'='%d' ...\n",
-			package.node_req, package.pack_req, package.pin, package.name,
-			package.value);
 	radio.stopListening();
-	log(LOG_INFO,
-			"2 Подготовлен пакет для ноды %d с номером %d  pin=%i '%s'='%d' ...\n",
-			package.node_req, package.pack_req, package.pin, package.name,
-			package.value);
-
 	radio.write(&package, sizeof(package));
-// Now, resume listening so we catch the next packets.
 	radio.startListening();
-// Spew it
 	log(LOG_INFO,
 			"Отправлен пакет для ноды %d с номером %d  pin=%i '%s'='%d' ...\n",
-			package.node_req, package.pack_req, package.pin, package.name,
+			package.node_to, package.pack_req, package.pin, package.name,
 			package.value);
 	delay(925); //Delay after payload responded to, minimize RPi CPU time
 
@@ -218,7 +208,7 @@ void parseAndSend(char *commandBuffer) {
 			break;
 		case 5: // text
 			CharToByte(str, to_send.name, StringLen);
-			//to_send.com = (unsigned char) str;
+			//to_send.-com = (unsigned char) str;
 			log(LOG_INFO, "COMMENT: %s \n", to_send.name);
 			break;
 //			1;47;2;3;4;SPinStatus;
@@ -285,12 +275,12 @@ int read_from_client(int filedes) {
 	else {
 		memcpy(_buffer, buffer, nbytes);
 		strtok(_buffer, "\r\n");
-		log(LOG_INFO, "[TCPServer] receive: '%s'\n", _buffer);
+		
 		if (strcmp(_buffer, "Any body home?") == 0) {
-			log(LOG_INFO, "[TCPServer] ping...pong\n");
+			//log(LOG_INFO, "[TCPServer] ping...pong\n");
 			write(filedes, pong, sizeof(pong));
 			return 0;
-		};
+		} else log(LOG_INFO, "[TCPServer] receive: '%s'\n", _buffer);;
 		/* Data read. */
 		buffer[nbytes] = '\0';
 
